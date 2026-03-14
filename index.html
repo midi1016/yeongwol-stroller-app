@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Yeongwol 8-Spot Pilgrimage Map | K-Family Guide</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=Cormorant+Garamond:ital,wght@0,300;0,600;1,300&display=swap" rel="stylesheet">
+<!-- Leaflet CSS for Map -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'DM Sans',sans-serif; background:#fdf6f0; color:#1c2b3a; line-height: 1.5; }
+
+/* Mobile Container */
+.app-container { max-width: 500px; margin: 0 auto; background: #fdf6f0; min-height: 100vh; position: relative; }
+
+.top-bar { background:#1c2b3a; padding:14px 20px; display:flex; align-items:center; justify-content:space-between; }
+.logo-text { font-size:16px; font-weight:700; color:white; letter-spacing: 0.5px; }
+.top-tagline { font-size:11px; letter-spacing:2px; text-transform:uppercase; color:#8aa0b0; }
+
+.hero { padding:32px 20px 20px; text-align:center; border-bottom:1px solid #ede0dc; }
+.hero-eyebrow { font-size:10px; letter-spacing:3px; text-transform:uppercase; color:#d4748a; margin-bottom:10px; }
+.hero-title { font-family:'Cormorant Garamond',serif; font-size:32px; font-weight:300; line-height:1.1; color:#1c2b3a; margin-bottom:6px; }
+.hero-sub { font-size:13px; color:#7a8e9a; }
+
+/* Map Container Styles */
+.map-wrap { margin: 16px 20px 0; border-radius: 14px; overflow: hidden; border: 1px solid #ede0dc; height: 260px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); z-index: 10; position: relative; }
+#map { height: 100%; width: 100%; z-index: 1; }
+
+.filter-bar { display:flex; gap:8px; padding:16px 20px; overflow-x:auto; background:white; border-bottom:1px solid #ede0dc; scrollbar-width:none; position:sticky; top:0; z-index:50; }
+.filter-bar::-webkit-scrollbar { display:none; }
+.fbtn { flex-shrink:0; font-size:11px; letter-spacing:1px; padding:6px 14px; border-radius:20px; border:1px solid #ddd0cc; background:transparent; color:#7a8e9a; cursor:pointer; font-family:'DM Sans',sans-serif; transition:all .2s; }
+.fbtn.active { background:#1c2b3a; color:white; border-color:#1c2b3a; }
+
+/* Routes Container - Vertical Stack */
+.routes-container { display: flex; flex-direction: column; gap: 12px; padding: 16px 20px 8px; }
+.route-banner { padding:14px 16px; background:white; border-radius:12px; border:1px solid #ede0dc; border-left:3px solid #1c2b3a; }
+.route-label { font-size:9px; letter-spacing:2.5px; text-transform:uppercase; color:#aab8c0; margin-bottom:6px; }
+.route-stops { font-size:12px; color:#5a6e7a; line-height:1.8; }
+.route-stops strong { color:#1c2b3a; }
+.train-strip { display:flex; align-items:center; gap:8px; margin-top:10px; padding-top:10px; border-top:1px solid #ede0dc; font-size:11px; color:#5a6e7a; }
+.train-badge { background:#1c2b3a; color:white; font-size:9px; letter-spacing:1px; padding:3px 9px; border-radius:20px; flex-shrink:0; }
+
+/* Spot Cards */
+.spots { padding:12px 20px 120px; }
+.card { background:white; border-radius:14px; border:1px solid #ede0dc; margin-bottom:10px; overflow:hidden; cursor:pointer; transition:box-shadow .2s,border-color .2s; display:none; }
+.card.vis { display:block; }
+.card.open { border-color:#d4748a; box-shadow:0 4px 20px rgba(0,0,0,.07); }
+
+.card-head { display:flex; align-items:flex-start; gap:12px; padding:16px; }
+.num { width:30px; height:30px; border-radius:50%; border:1.5px solid #ddd0cc; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:500; flex-shrink:0; color:#1c2b3a; background:#fdf6f0; }
+.num.must { background:#fde8ed; border-color:#d4748a; color:#d4748a; }
+.info { flex:1; min-width:0; }
+.spot-name { font-size:15px; font-weight:500; margin-bottom:2px; }
+.spot-kr { font-size:12px; color:#9aacb8; margin-bottom:8px; }
+.tags { display:flex; gap:6px; flex-wrap:wrap; }
+.tag { font-size:10px; padding:3px 9px; border-radius:20px; }
+.t-region { background:#f0e8ec; color:#8a6070; }
+.t-must { background:#fde8ed; color:#c05070; }
+.t-green { background:#e1f5ee; color:#0f6e56; }
+.t-yellow { background:#faeeda; color:#633806; }
+.t-red { background:#fcebeb; color:#a32d2d; }
+.chevron { font-size:13px; color:#aab8c0; flex-shrink:0; margin-top:4px; transition:transform .2s; }
+.card.open .chevron { transform:rotate(180deg); }
+
+.card-body { display:none; padding:0 16px 16px; border-top:1px solid #f0e8ec; }
+.card.open .card-body { display:block; }
+.scene { font-size:12px; color:#7a8e9a; font-style:italic; line-height:1.7; margin:12px 0; }
+.dg { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:12px; }
+.di { background:#fdf6f0; border-radius:8px; padding:10px 12px; }
+.dl { font-size:9px; letter-spacing:2px; text-transform:uppercase; color:#aab8c0; margin-bottom:4px; }
+.dv { font-size:13px; font-weight:500; color:#1c2b3a; }
+.dot-row { display:flex; align-items:center; gap:5px; }
+.dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+.dg-g { background:#1d9e75; } .dg-y { background:#ba7517; } .dg-r { background:#e24b4a; }
+.tip { background:#fff8ec; border-radius:8px; padding:11px 13px; }
+.tip-lbl { font-size:9px; letter-spacing:2px; text-transform:uppercase; color:#ba7517; font-weight:500; margin-bottom:4px; }
+.tip-txt { font-size:13px; color:#5a4020; line-height:1.7; }
+.train-box { margin-top:10px; background:#e8f0f8; border-radius:8px; padding:12px 14px; }
+.tb-lbl { font-size:9px; letter-spacing:2px; text-transform:uppercase; color:#185fa5; font-weight:500; margin-bottom:5px; }
+.tb-txt { font-size:13px; color:#1c3060; line-height:1.7; }
+
+.footer { position:fixed; bottom:0; left:0; right:0; background:white; border-top:1px solid #ede0dc; padding:14px 20px; display:flex; align-items:center; justify-content:space-between; gap:12px; z-index: 100; max-width: 500px; margin: 0 auto; }
+.footer-logo-text { font-size:14px; font-weight:700; color:#1c2b3a; }
+.footer-sub { font-size:11px; color:#9aacb8; }
+
+/* Custom Popup Style */
+.leaflet-popup-content-wrapper { border-radius: 12px; padding: 0; }
+.leaflet-popup-content { margin: 12px; font-family: 'DM Sans', sans-serif; }
+</style>
+</head>
+<body>
+
+<div class="app-container">
+  <!-- Top Bar -->
+  <div class="top-bar">
+    <div class="logo-text">K-Family Guide</div>
+    <span class="top-tagline">Yeongwol Field Guide</span>
+  </div>
+
+  <!-- Hero Section -->
+  <div class="hero">
+    <p class="hero-eyebrow">Yeongwol(영월) · Gangwon Province · 2026</p>
+    <h1 class="hero-title">The 8-Spot<br>Pilgrimage Map</h1>
+    <p class="hero-sub">Hyper-detailed stroller guide · <em>The King's Warden</em> film locations</p>
+  </div>
+
+  <!-- Map Container -->
+  <div class="map-wrap">
+    <div id="map"></div>
+  </div>
+
+  <!-- Filter Bar -->
+  <div class="filter-bar">
+    <button class="fbtn active" onclick="doFilter('all',this)">All Sites</button>
+    <button class="fbtn" onclick="doFilter('must',this)">Must-See</button>
+    <button class="fbtn" onclick="doFilter('excellent',this)">Stroller: Excellent</button>
+    <button class="fbtn" onclick="doFilter('good',this)">Stroller: Good</button>
+    <button class="fbtn" onclick="doFilter('night',this)">Night Visit</button>
+  </div>
+
+  <!-- Routes Container -->
+  <div class="routes-container" id="routeBannerWrap">
+    <!-- Route 1: Cinematic Run -->
+    <div class="route-banner">
+      <div class="route-label">Cinematic Run — Full emotional arc</div>
+      <div class="route-stops">
+        <strong>Yeongwol Stn</strong> → <strong>① Cheongnyeongpo</strong> → <strong>② Jangneung</strong> → <strong>③ Gwanpungnu</strong> → <strong>⑦ West Market</strong> <span style="font-size:11px;color:#9aacb8">(dinner)</span> → <strong>⑧ Byeolmaro</strong> <span style="font-size:11px;color:#9aacb8">(night)</span>
+      </div>
+      <div class="train-strip">
+        <span class="train-badge">Last train</span>
+        KTX-eum departs <strong>20:35</strong> · to Seoul <strong>22:40</strong>
+      </div>
+    </div>
+
+    <!-- Route 2: Gentle Stroll -->
+    <div class="route-banner" style="border-left-color: #0f6e56;">
+      <div class="route-label">The Gentle Stroll — Low energy, high meaning</div>
+      <div class="route-stops">
+        <strong>Yeongwol Stn</strong> → <strong>② Jangneung</strong> → <strong>Sports Park</strong> <span style="font-size:11px;color:#9aacb8">(run free)</span> → <strong>⑥ Yeongmojeon</strong> → <strong>Stn Nursing Room</strong>
+      </div>
+      <div class="train-strip">
+        <span class="train-badge" style="background:#0f6e56">Vibe</span>
+        Wide open grass, cool shade, zero pressure.
+      </div>
+    </div>
+
+    <!-- Route 3: Photo Day -->
+    <div class="route-banner" style="border-left-color: #ba7517;">
+      <div class="route-label">The Photo Day — Shots you'll frame</div>
+      <div class="route-stops">
+        <strong>Yeongwol Stn</strong> → <strong>⑤ Panun-ri Bridge</strong> → <strong>④ Seondol</strong> → <strong>Hanbando Overlook</strong> → <strong>⑦ West Market</strong>
+      </div>
+      <div class="train-strip">
+        <span class="train-badge" style="background:#ba7517">Tip</span>
+        Grab dakgangjeong at the market for the train home.
+      </div>
+    </div>
+  </div>
+
+  <!-- Spots List -->
+  <div class="spots" id="spotsList"></div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <div class="footer-logo-text">K-Family Guide</div>
+    <span class="footer-sub">Korea for families</span>
+  </div>
+</div>
+
+<!-- Leaflet JS for Map -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+const spots = [
+  { num:1, name:"Cheongnyeongpo", kr:"청령포", lat: 37.1774, lng: 128.4487, scene:"Where Danjong first stepped off the ferry into exile — surrounded on three sides by the Donggang River, unable to leave.", region:"Historic Site", stroller:"good", crowd:"Medium", access:"Short ferry from riverbank", terrain:"1.5m wooden boardwalk throughout the pine forest", tip:"There's a 15cm step onto the ferry. Say 'Help, please' and the crew will take both ends of the stroller immediately.", tags:["must"], night:false, trainBox:false },
+  { num:2, name:"Jangneung Royal Tomb", kr:"장릉", lat: 37.1953, lng: 128.4556, scene:"Where Eom Heung-do secretly gave Danjong a proper burial — at mortal risk. The film's emotional endpoint.", region:"UNESCO Tomb", stroller:"excellent", crowd:"Low", access:"Flat path from parking", terrain:"Compacted earth, almost no incline. Any stroller rolls here.", tip:"Best bathrooms in Yeongwol — use the Danjong History Museum elevator to Floor 2, then diaper-change before heading to the tomb.", tags:["must"], night:false, trainBox:false },
+  { num:3, name:"Gwanpungnu Pavilion", kr:"관풍헌", lat: 37.1856, lng: 128.4673, scene:"Danjong's final room. He received the poison here at seventeen. He did as he was told.", region:"Historic Site", stroller:"excellent", crowd:"Low–Medium", access:"Downtown, street-level", terrain:"Flat. Stroller rolls directly into the hanok courtyard.", tip:"The cafés surrounding Gwanpungnu are all All-Kids Zones — the opposite of Seoul. Sit, order the sikhye, and let the place land.", tags:["must"], night:false, trainBox:false },
+  { num:4, name:"Seondol (Standing Stone)", kr:"선돌", lat: 37.2155, lng: 128.4300, scene:"A massive split rock rising 70 meters above the meandering Seogang River. A landscape so perfectly framed it feels painted.", region:"Scenic Overlook", stroller:"good", crowd:"Low–Medium", access:"100m walk from the parking lot", terrain:"Mostly flat wooden boardwalk. A few wooden stairs at the final viewing platform.", tip:"Leave the stroller at the base of the final stairs. Hold your child for the final steps to get one of the most iconic photos in Yeongwol.", tags:[], night:false, trainBox:false },
+  { num:5, name:"Panun-ri Stepping-Stone Bridge", kr:"판운리 섶다리", lat: 37.2611, lng: 128.3752, scene:"The bridge where messengers crossed with news from the outside world into Danjong's exile.", region:"Traditional Bridge", stroller:"limited", crowd:"Very Low", access:"Flat meadow path up to bridge entrance", terrain:"Bridge (woven pine) cannot be crossed with stroller. Park at meadow edge.", tip:"Park the stroller and walk to the water. 500 years, same river, same light. This is the photo that earns its own frame.", tags:[], night:false, trainBox:false },
+  { num:6, name:"Yeongmojeon Shrine", kr:"영모전", lat: 37.1868, lng: 128.4680, scene:"After his death, Yeongwol's people quietly made Danjong a mountain spirit. A small, unofficial act of defiance.", region:"Shrine", stroller:"excellent", crowd:"Very Low", access:"Gentle ramp from entrance to shrine", terrain:"No steps. Complete ramp access throughout.", tip:"Quietest site on the list. Best for nap-time walks — cool shade, birdsong, nothing moving fast.", tags:[], night:false, trainBox:false },
+  { num:7, name:"Yeongwol West Market", kr:"영월 서부시장", lat: 37.1836, lng: 128.4638, scene:"The market where Eom Heung-do quietly bought the warm rice he brought to the boy. Hot food. I-actually-care-whether-you-eat-it food.", region:"Traditional Market", stroller:"excellent", crowd:"Medium", access:"Central corridor: two strollers wide", terrain:"Wide, flat market floor throughout.", tip:"Find Mitan-jip (미탄집) for memil jeonbyeong — sit your child on the warm ondol floor and order everything. And grab dakgangjeong (닭강정) at the exit stalls. They travel perfectly on the train home.", tags:["must"], night:true, trainBox:true },
+  { num:8, name:"Byeolmaro Observatory", kr:"별마로 천문대", lat: 37.1988, lng: 128.4908, scene:"The highest point in Yeongwol — built to look at what endures. Danjong, remembered.", region:"Observatory", stroller:"excellent", crowd:"Low–Medium", access:"Full elevator access, every floor to rooftop deck", terrain:"Mountain summit, but 100% lift-accessible. Stroller to the rooftop.", tip:"Lowest light pollution in Korea. Come after dark if your child can last. Temperature drops sharply at the summit — stroller windshield cover is non-negotiable.", tags:["must"], night:true, trainBox:false }
+];
+
+let map;
+let markerLayer;
+
+function initMap() {
+  // Initialize map centered roughly on Yeongwol
+  map = L.map('map', { zoomControl: false }).setView([37.1856, 128.4673], 12);
+  
+  // Custom, clean basemap (Carto Voyager)
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; OpenStreetMap contributors',
+    subdomains: 'abcd',
+    maxZoom: 19
+  }).addTo(map);
+
+  markerLayer = L.layerGroup().addTo(map);
+}
+
+function strollerTag(s){
+  if(s==="excellent") return '<span class="tag t-green">Stroller: Excellent</span>';
+  if(s==="good") return '<span class="tag t-yellow">Stroller: Good</span>';
+  return '<span class="tag t-red">Stroller: Limited</span>';
+}
+function dotClass(s){ return s==="excellent"?"dg-g":s==="good"?"dg-y":"dg-r"; }
+function dotLabel(s){ return s==="excellent"?"Excellent":s==="good"?"Good":"Limited"; }
+
+function renderSpots(f){
+  const list=document.getElementById("spotsList"); list.innerHTML="";
+  
+  // Clear map markers
+  if(markerLayer) markerLayer.clearLayers();
+  let bounds = [];
+
+  spots.forEach((s,i)=>{
+    let show=false;
+    if(f==="all") show=true;
+    else if(f==="must"&&s.tags.includes("must")) show=true;
+    else if(f==="excellent"&&s.stroller==="excellent") show=true;
+    else if(f==="good"&&(s.stroller==="excellent"||s.stroller==="good")) show=true;
+    else if(f==="night"&&s.night) show=true;
+
+    if(!show) return;
+
+    // 1. Add List Item
+    const numCls = s.tags.includes("must") ? "num must" : "num";
+    const mustTag = s.tags.includes("must") ? '<span class="tag t-must">Must-see</span>' : "";
+
+    const card=document.createElement("div");
+    card.className="card vis";
+    card.id="c"+i;
+    card.innerHTML=`
+      <div class="card-head" onclick="toggle(${i})">
+        <div class="${numCls}">${s.num}</div>
+        <div class="info">
+          <div class="spot-name">${s.name}</div>
+          <div class="spot-kr">${s.kr}</div>
+          <div class="tags">
+            <span class="tag t-region">${s.region}</span>
+            ${strollerTag(s.stroller)}
+            ${mustTag}
+          </div>
+        </div>
+        <div class="chevron">▾</div>
+      </div>
+      <div class="card-body">
+        <p class="scene">"${s.scene}"</p>
+        <div class="dg">
+          <div class="di"><div class="dl">Terrain</div><div class="dv" style="font-size:12px;font-weight:400">${s.terrain}</div></div>
+          <div class="di"><div class="dl">Stroller</div><div class="dot-row"><div class="dot ${dotClass(s.stroller)}"></div><div class="dv">${dotLabel(s.stroller)}</div></div></div>
+          <div class="di"><div class="dl">Crowds</div><div class="dv">${s.crowd}</div></div>
+          <div class="di"><div class="dl">Access</div><div class="dv" style="font-size:12px;font-weight:400">${s.access}</div></div>
+        </div>
+        <div class="tip"><div class="tip-lbl">Local Dad tip</div><div class="tip-txt">${s.tip}</div></div>
+        ${s.trainBox ? `<div class="train-box"><div class="tb-lbl">Last KTX-eum home</div><div class="tb-txt">Departs Yeongwol Station <strong>20:35</strong> · Arrives Cheongnyangni <strong>22:40</strong><br>Dinner done. Dakgangjeong in the bag. Kids asleep by Seoul.</div></div>` : ""}
+      </div>`;
+    list.appendChild(card);
+
+    // 2. Add Map Marker
+    if(markerLayer) {
+      const pinColor = s.tags.includes("must") ? "#d4748a" : "#1c2b3a";
+      const m = L.circleMarker([s.lat, s.lng], {
+        radius: 8,
+        fillColor: pinColor,
+        color: "#fff",
+        weight: 2,
+        fillOpacity: 0.9
+      }).bindPopup(`<b>${s.num}. ${s.name}</b><br><span style="font-size:11px; color:#7a8e9a;">${s.kr}</span>`)
+        .on('click', () => {
+          // Scroll to the card and open it
+          const cardEl = document.getElementById('c'+i);
+          cardEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          if(!cardEl.classList.contains('open')) toggle(i);
+        });
+      
+      markerLayer.addLayer(m);
+      bounds.push([s.lat, s.lng]);
+    }
+  });
+
+  // Fit map to markers
+  if(map && bounds.length > 0) {
+    map.fitBounds(bounds, { padding: [20, 20], maxZoom: 14 });
+  }
+}
+
+function toggle(i){
+  const c = document.getElementById("c"+i);
+  const isOpen = c.classList.contains("open");
+  
+  // Close all other cards (optional accordion behavior)
+  document.querySelectorAll('.card').forEach(el => el.classList.remove('open'));
+  
+  if(!isOpen) {
+    c.classList.add("open");
+    // Fly to spot on map
+    if(map) map.flyTo([spots[i].lat, spots[i].lng], 15, { duration: 1 });
+  }
+}
+
+function doFilter(f,btn){
+  document.querySelectorAll(".fbtn").forEach(b=>b.classList.remove("active"));
+  btn.classList.add("active");
+  renderSpots(f);
+  document.getElementById("routeBannerWrap").style.display=(f==="all"||f==="must")?"flex":"none";
+}
+
+// Initialize map then render spots
+document.addEventListener("DOMContentLoaded", () => {
+  initMap();
+  renderSpots("all");
+});
+</script>
+</body>
+</html>
